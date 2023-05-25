@@ -672,6 +672,14 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 // 
 //-----------------------------------------------------------------------------
 
+enum ScriptLoadStatus_t
+{
+	SCRIPT_LOAD_OK = 0,
+	SCRIPT_LOAD_ERR = 1,
+	SCRIPT_LOAD_ERR_SYNTAX = 2,
+	SCRIPT_LOAD_NO_FILESYSTEM = 3,
+};
+
 #ifdef RegisterClass
 #undef RegisterClass
 #endif
@@ -717,8 +725,8 @@ public:
 	//	If you're doing this, you're probably doing something wrong.
 	virtual void *GetInternalVM() = 0;
 
-	//	No functionality
-	virtual void AddSearchPath( const char *pszSearchPath ) = 0;
+	//	Unimplemented
+	virtual void AddSearchPath() = 0;
 
 	virtual void UnknownAlpha() = 0;
 
@@ -726,7 +734,8 @@ public:
 
 	virtual void UnknownBeta() = 0;
 
-	virtual bool CollectGarbage() = 0;
+	//	Performs a slightly quicker operation compared to the full .CollectGarbage().
+	virtual bool CollectGarbageFast() = 0;
 
 	//--------------------------------------------------------
 	// Execution of compiled script (NOT a specific function within a script!)
@@ -818,6 +827,7 @@ public:
 
 	virtual bool SetEnumValue(HSCRIPT hScope, const char *pszEnumName, const char *pszValueName, int value, const char *pszDescription) = 0;
 
+	//	Creates a table, passing it's HScript variant into &Table.
 	virtual void CreateTable( ScriptVariant_t &Table ) = 0;
 	virtual bool IsTable( HSCRIPT hScope ) = 0;
 	virtual int	GetNumTableEntries( HSCRIPT hScope ) = 0;
@@ -825,6 +835,8 @@ public:
 	virtual int GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue ) = 0;
 
 	virtual bool CreateKeyValuesFromTable(HSCRIPT hScope, KeyValues *pKeyValues, void *pUnknown, void* pAlsoUnknown) = 0;
+
+	//----------------------------------------------------------------------------
 
 	virtual bool GetValue( HSCRIPT hScope, int nIndex, ScriptVariant_t *pValue ) = 0;
 	virtual bool GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pValue ) = 0;
@@ -837,19 +849,25 @@ public:
 
 	virtual bool ClearValue( HSCRIPT hScope, const char *pszKey ) = 0;
 	bool ClearValue( const char *pszKey)																							{ return ClearValue( NULL, pszKey ); }
-	
+
+	//----------------------------------------------------------------------------
+
 	virtual HSCRIPT CreateArray( ScriptVariant_t & ) = 0;
 	virtual bool IsArray( HSCRIPT hScope ) = 0;
 	virtual int GetArrayCount( HSCRIPT hScope ) = 0;
-	virtual void ArrayAddToTail( HSCRIPT hScope, const ScriptVariant_t &pValue ) = 0;
+	//	Returns number of objects in array BEFORE insert.
+	virtual int ArrayAddToTail( HSCRIPT hScope, const ScriptVariant_t &pValue ) = 0;
 	
 	//----------------------------------------------------------------------------
 
-	virtual void WriteState( CUtlBuffer *pBuffer ) = 0;
-	virtual void ReadState( CUtlBuffer *pBuffer ) = 0;
+	//	Unimplemented
+	virtual void WriteState() = 0;
+	//	Unimplemented
+	virtual void ReadState() = 0;
 	
-	virtual void CollectGarbage( const char *, bool ) = 0;
+	virtual void CollectGarbage( const char * pUnknown, bool bAlsoUnknown = false ) = 0;
 
+	//	Unimplemented
 	virtual void DumpState() = 0;
 
 	virtual void SetOutputCallback( ScriptOutputFunc_t pFunc ) = 0;
@@ -863,14 +881,15 @@ public:
 
 	virtual HSCRIPT CopyHandle( HSCRIPT hScope ) = 0;
 
-	virtual int GetIdentity( HSCRIPT hScope ) = 0;
+	//	Fetches a script from the filesystem, compiles it, and passes it in script if result
+	//	is SCRIPT_LOAD_OK.
+	virtual ScriptLoadStatus_t LoadAndCompileScriptFile(const char *pszPath, const char *pszUnknown, HSCRIPT *pScript) = 0;
 
-	class ISquirrelMetamethodDelegate;
+	//	Get the ID of this handle. Write as a string into psResult, returns number of bytes written.
+	virtual int GetID( HSCRIPT hScope, char* psResult, int nLength ) = 0;
 
-	virtual void *MakeSquirrelMetamethod_Get( HSCRIPT&, const char*, ISquirrelMetamethodDelegate *, bool ) = 0;
-	virtual void DestroySquirrelMetamethod_Get( CSquirrelMetamethodDelegateImpl * ) = 0;
-
-	virtual int GetKeyValue2( HSCRIPT hScope, int iterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue ) = 0;
+	//	lua_equal the values underlying the handles.
+	virtual bool AreHandlesEqual(HSCRIPT hFirst, HSCRIPT hSecond) = 0;
 
 	//----------------------------------------------------------------------------
 	// Call API
