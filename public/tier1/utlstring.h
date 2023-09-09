@@ -54,8 +54,8 @@ class CUtlString
 public:
 	typedef enum
 	{
-		PATTERN_NONE = 0x00000000,
-		PATTERN_DIRECTORY = 0x00000001
+		PATTERN_NONE		= 0x00000000,
+		PATTERN_DIRECTORY	= 0x00000001
 	} TUtlStringPattern;
 
 public:
@@ -65,9 +65,9 @@ public:
 
 	DLL_CLASS_IMPORT CUtlString(const CBufferString& string);
 	CUtlString();
-	CUtlString(const char* pString);
-	CUtlString(const char* pString, int length);
-	CUtlString(const CUtlString& string);
+	CUtlString( const char* pString );
+	CUtlString( const char* pString, int length );
+	CUtlString( const CUtlString& string );
 
 #ifdef MOVE_CONSTRUCTOR_SUPPORT
 	// Support moving of CUtlString objects. Long live C++11
@@ -76,7 +76,7 @@ public:
 	// which are about to be destroyed. It can also be explicitly invoked with
 	// std::move().
 	// Move constructor:
-	CUtlString(CUtlString&& rhs)
+	CUtlString( CUtlString&& rhs )
 	{
 		// Move the string pointer from the source to this -- be sure to
 		// zero out the source to avoid double frees.
@@ -84,7 +84,7 @@ public:
 		rhs.m_pString = 0;
 	}
 	// Move assignment operator:
-	CUtlString& operator=(CUtlString&& rhs)
+	CUtlString& operator=( CUtlString&& rhs )
 	{
 		// Move the string pointer from the source to this -- be sure to
 		// zero out the source to avoid double frees.
@@ -256,7 +256,7 @@ private:
 	// AllocMemory allocates enough space for length characters plus a terminating zero.
 	// Previous characters are preserved, the buffer is null-terminated, but new characters
 	// are not touched.
-	DLL_CLASS_IMPORT void* AllocMemoryBlock(uint64 length);
+	DLL_CLASS_IMPORT void*	AllocMemoryBlock(uint64 length);
 	DLL_CLASS_IMPORT void	FreeMemoryBlock();
 
 	// If m_pString is not NULL, it points to the start of the string, and the memory allocation.
@@ -305,26 +305,26 @@ inline bool operator!=(const CUtlString& utlString, const char* pString)
 // Inline methods
 //-----------------------------------------------------------------------------
 inline CUtlString::CUtlString()
-	: m_pString(NULL)
+: m_pString( NULL )
 {
 }
 
-inline CUtlString::CUtlString(const char* pString)
-	: m_pString(NULL)
+inline CUtlString::CUtlString( const char* pString )
+: m_pString(NULL)
 {
-	Set(pString);
+	Set( pString );
 }
 
-inline CUtlString::CUtlString(const char* pString, int length)
-	: m_pString(NULL)
+inline CUtlString::CUtlString( const char* pString, int length )
+: m_pString(NULL)
 {
-	SetDirect(pString, length);
+	SetDirect( pString, length );
 }
 
-inline CUtlString::CUtlString(const CUtlString& string)
-	: m_pString(NULL)
+inline CUtlString::CUtlString( const CUtlString& string )
+: m_pString(NULL)
 {
-	Set(string.Get());
+	Set( string.Get() );
 }
 
 inline CUtlString::~CUtlString()
