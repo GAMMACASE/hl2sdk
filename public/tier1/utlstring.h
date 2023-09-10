@@ -42,7 +42,7 @@ inline size_t strnlen(const char *s, size_t n)
 
 class CUtlStringToken
 {
-  unsigned int m_nHashCode;
+	unsigned int m_nHashCode;
 };
 
 //-----------------------------------------------------------------------------
@@ -63,143 +63,124 @@ public:
 	// also implement Find/Insert/Remove functions that take const char* params.
 	typedef const char* AltArgumentType_t;
 
-	DLL_CLASS_IMPORT CUtlString(const CBufferString& string);
 	CUtlString();
-	CUtlString( const char* pString );
-	CUtlString( const char* pString, int length );
-	CUtlString( const CUtlString& string );
-
-#ifdef MOVE_CONSTRUCTOR_SUPPORT
-	// Support moving of CUtlString objects. Long live C++11
-	// This move constructor will get called when appropriate, such as when
-	// returning objects from functions, or otherwise copying from temporaries
-	// which are about to be destroyed. It can also be explicitly invoked with
-	// std::move().
-	// Move constructor:
-	CUtlString( CUtlString&& rhs )
-	{
-		// Move the string pointer from the source to this -- be sure to
-		// zero out the source to avoid double frees.
-		m_pString = rhs.m_pString;
-		rhs.m_pString = 0;
-	}
-	// Move assignment operator:
-	CUtlString& operator=( CUtlString&& rhs )
-	{
-		// Move the string pointer from the source to this -- be sure to
-		// zero out the source to avoid double frees.
-		m_pString = rhs.m_pString;
-		rhs.m_pString = 0;
-		return *this;
-	}
-#endif
+	CUtlString(const char *pString);
+	CUtlString(const char *pString, int length);
+	CUtlString(const CUtlString &string);
+	DLL_CLASS_IMPORT CUtlString(const CBufferString &string);
 
 	~CUtlString();
 
-	DLL_CLASS_IMPORT CUtlString& operator=(const CBufferString& src);
-	CUtlString& operator=(const CUtlString& src);
-	CUtlString& operator=(const char* src);
+	DLL_CLASS_IMPORT CUtlString &operator=(const CBufferString &src);
+	CUtlString &operator=(const CUtlString &src);
+	CUtlString &operator=(const char *src);
 
 	// Test for equality, both are case sensitive
-	DLL_CLASS_IMPORT bool operator==(const CUtlString& src) const;
-	DLL_CLASS_IMPORT bool operator==(const CBufferString& src) const;
+	DLL_CLASS_IMPORT bool operator==(const CUtlString &src) const;
+	DLL_CLASS_IMPORT bool operator==(const CBufferString &src) const;
 
-	bool operator!=(const CUtlString& src) const { return !operator==(src); }
+	bool operator!=(const CUtlString &src) const { return !operator==(src); }
+	bool operator!=(const CBufferString &src) const { return !operator==(src); }
 
 	DLL_CLASS_IMPORT char operator[](int i) const;
 
-	DLL_CLASS_IMPORT CUtlString operator+(const CUtlString&) const;
-	DLL_CLASS_IMPORT CUtlString operator+(int) const;
-	DLL_CLASS_IMPORT CUtlString operator+(const char*) const;
+	DLL_CLASS_IMPORT CUtlString operator+(const char *pOther) const;
+	DLL_CLASS_IMPORT CUtlString operator+(const CUtlString &other) const;
+	DLL_CLASS_IMPORT CUtlString operator+(int rhs) const;
 
-	DLL_CLASS_IMPORT CUtlString& operator+=(const CUtlString& rhs);
-	DLL_CLASS_IMPORT CUtlString& operator+=(const CBufferString& rhs);
-	DLL_CLASS_IMPORT CUtlString& operator+=(char c);
-	DLL_CLASS_IMPORT CUtlString& operator+=(int);
-	DLL_CLASS_IMPORT CUtlString& operator+=(double);
-	DLL_CLASS_IMPORT CUtlString& operator+=(const char*);
+	DLL_CLASS_IMPORT CUtlString &operator+=(const CUtlString &rhs);
+	DLL_CLASS_IMPORT CUtlString &operator+=(const CBufferString &rhs);
+	DLL_CLASS_IMPORT CUtlString &operator+=(char c);
+	DLL_CLASS_IMPORT CUtlString &operator+=(int rhs);
+	DLL_CLASS_IMPORT CUtlString &operator+=(double rhs);
+	DLL_CLASS_IMPORT CUtlString &operator+=(const char *rhs);
 
-	inline operator const char* () const { return Get(); }
+	const char *Get() const;
+	operator const char *() const { return Get(); }
+	const char *String() const { return Get(); }
+
+	DLL_CLASS_IMPORT void		Set(const char *pValue);
 
 	// Get this string as an absolute path (calls right through to V_MakeAbsolutePathBuffer).
-	DLL_CLASS_IMPORT CUtlString AbsPath(const char* pStartingDir = NULL) const;
+	DLL_CLASS_IMPORT CUtlString AbsPath(const char *pStartingDir = NULL) const;
 
-	// calls CBufferString::EnsureOwnedAllocation
-	// if the second parameter is true it will set UNK4 from EAllocationOption_t
-	// always uses ALLOW_HEAP_ALLOCATION
-	DLL_CLASS_IMPORT void Acquire(CBufferString* pBufferString, bool bUNK4);
+	// Calls CBufferString::EnsureOwnedAllocation
+	// If the second parameter is true it will set UNK4 from EAllocationOption_t
+	// Always uses ALLOW_HEAP_ALLOCATION
+	DLL_CLASS_IMPORT void Acquire(CBufferString *pBufferString, bool bUNK4);
 
-	DLL_CLASS_IMPORT void Append(const char* pchAddition);
-	DLL_CLASS_IMPORT void Append(const char* pAddition, int nChars);
+	DLL_CLASS_IMPORT void Append(const char *pchAddition);
+	DLL_CLASS_IMPORT void Append(const char *pAddition, int nChars);
 
-	DLL_CLASS_IMPORT void Convert(wchar_t* string);
+	DLL_CLASS_IMPORT void Convert(wchar_t *string);
 
-	// Gets a string with one directory removed. Uses CBufferString::ExtractFilePath
-	// I'm pretty sure it strips trailing slashes
+	// Uses CBufferString::ExtractFilePath
+	// Returns the root path to the provided directory "a/b/c/" -> "a/b"
 	DLL_CLASS_IMPORT CUtlString DirName() const;
 
-	// I'm pretty sure this does: "abcd" -> "asdf.eb"
-	// I can't quite figure out why it needs to return an object though
-	DLL_CLASS_IMPORT CUtlString DottedAppend(const char* string) const;
+	// Appends the string starting with a dot "file".DottedAppend("test") -> "file.test"
+	DLL_CLASS_IMPORT CUtlString DottedAppend(const char *string) const;
 
-	// no idea, it looks like it cuts the string off though
-	DLL_CLASS_IMPORT CUtlString Ellipsify(int);
+	// Chops the string to fit the nChop length, appending "..." as a last symbols (inclusive)
+	// Works only with nChop amount >= 3, otherwise string would be returned as is
+	DLL_CLASS_IMPORT CUtlString Ellipsify(int nChop);
 
 	DLL_CLASS_IMPORT void FixSlashes(char cSeparator = CORRECT_PATH_SEPARATOR);
 	DLL_CLASS_IMPORT void FixupPathName();
 
-	DLL_CLASS_IMPORT int Format(const char* pFormat, ...)  FMTFUNCTION(2, 3);
-	DLL_CLASS_IMPORT int FormatV(const char* pFormat, va_list marker);
+	DLL_CLASS_IMPORT int Format(const char *pFormat, ...)  FMTFUNCTION(2, 3);
+	DLL_CLASS_IMPORT int FormatV(const char *pFormat, va_list marker);
 
 	// Get a string with the base filename (with CBufferString::ExtractFileBase).
 	DLL_CLASS_IMPORT CUtlString GetBaseFilename() const;
 	// Empty string for those times when you need to return an empty string and
 	// either don't want to pay the construction cost, or are returning a
 	// const CUtlString& and cannot just return "".
-	DLL_CLASS_IMPORT static const CUtlString& GetEmptyString();
+	DLL_CLASS_IMPORT static const CUtlString &GetEmptyString();
 	// Get a string with the file extension
 	DLL_CLASS_IMPORT CUtlString GetExtensionAlloc() const;
 
-	DLL_CLASS_IMPORT char* GetForModify();
+	DLL_CLASS_IMPORT char *GetForModify();
 
-	DLL_CLASS_IMPORT bool IsEqual_CaseSensitive(const char* src) const;
-	DLL_CLASS_IMPORT bool IsEqual_FastCaseInsensitive(const char* src) const;
-
-	// Get a substring starting from the left side.
-	DLL_CLASS_IMPORT CUtlString Left(int32 nChars) const;
+	DLL_CLASS_IMPORT bool IsEqual_CaseSensitive(const char *src) const;
+	DLL_CLASS_IMPORT bool IsEqual_FastCaseInsensitive(const char *src) const;
 
 	// case SENSITIVE, use * for wildcard in pattern string
 	// nFlags checks for PATTERN_DIRECTORY
-	DLL_CLASS_IMPORT bool MatchesPattern(const CUtlString& Pattern, int nFlags = 0) const;
+	DLL_CLASS_IMPORT bool MatchesPattern(const CUtlString &Pattern, int nFlags = 0) const;
 
 	// Works like V_ComposeFileName.
-	DLL_CLASS_IMPORT static CUtlString PathJoin(const char* pStr1, const char* pStr2);
+	DLL_CLASS_IMPORT static CUtlString PathJoin(const char *pStr1, const char *pStr2);
+
+	// These can be used for utlvector sorts.
+	static int __cdecl SortCaseInsensitive(const CUtlString *pString1, const CUtlString *pString2);
+	static int __cdecl SortCaseSensitive(const CUtlString *pString1, const CUtlString *pString2);
 
 	DLL_CLASS_IMPORT void Purge();
+	void Clear() { Purge(); }
 
-	DLL_CLASS_IMPORT CUtlString Remove(const char* string, bool bCaseSensitive) const;
+	DLL_CLASS_IMPORT CUtlString Remove(const char *string, bool bCaseSensitive = true) const;
 	DLL_CLASS_IMPORT void		RemoveDotSlashes(char replacement);
-	DLL_CLASS_IMPORT CUtlString RemoveFromStart(const char* search, bool bCaseSensitive) const;
+	DLL_CLASS_IMPORT CUtlString RemoveFromStart(const char *search, bool bCaseSensitive = true) const;
 
-	// Get a string with all instances of one character replaced with another.
-	DLL_CLASS_IMPORT CUtlString Replace(char cFrom, char cTo) const;
-
-	// Replace the string beyond the index of cStart with pszReplacement
-	DLL_CLASS_IMPORT CUtlString Replace(const char cStart, const char* pszReplacement) const;
-
-	// Replace all instances of specified string with another.
-	DLL_CLASS_IMPORT CUtlString Replace(const char* pszSearch, const char* pszReplacement, bool caseSensitive) const;
+	// Replaces all instances of specified char with a char
+	DLL_CLASS_IMPORT CUtlString Replace(char cSearch, char cReplace) const;
+	// Replaces all instances of specified char with a string
+	DLL_CLASS_IMPORT CUtlString Replace(const char cSearch, const char *pszReplacement) const;
+	// Replaces all instances of specified string with another string
+	DLL_CLASS_IMPORT CUtlString Replace(const char *pszSearch, const char *pszReplacement, bool bCaseSensitive = true) const;
 
 	// Get a substring starting from the right side.
 	DLL_CLASS_IMPORT CUtlString Right(int32 nChars) const;
+	// Get a substring starting from the left side.
+	DLL_CLASS_IMPORT CUtlString Left(int32 nChars) const;
 
-	DLL_CLASS_IMPORT void		Set(const char* pValue);
 	// Set directly and don't look for a null terminator in pValue.
 	// nChars does not include the nul and this will only copy
 	// at most nChars (even if pValue is longer).  If nChars
 	// is >strlen(pValue) it will copy past the end, don't do it
 	// Does nothing if pValue == String()
-	DLL_CLASS_IMPORT void		SetDirect(const char* pValue, int nChars);
+	DLL_CLASS_IMPORT void		SetDirect(const char *pValue, int nChars);
 	// Sets the length (used to serialize into the buffer )
 	// Note: If nLen != 0, then this adds an extra byte for a null-terminator.	
 	DLL_CLASS_IMPORT void		SetLength(int nLen);
@@ -217,7 +198,7 @@ public:
 	DLL_CLASS_IMPORT void		StripTrailingSlash();
 
 	// Swaps this object with target
-	DLL_CLASS_IMPORT void Swap(CUtlString& target);
+	DLL_CLASS_IMPORT void Swap(CUtlString &target);
 
 	// Case Change
 	DLL_CLASS_IMPORT void ToLowerFast();
@@ -225,11 +206,11 @@ public:
 
 	// Trim whitespace
 	DLL_CLASS_IMPORT void Trim(char cTarget);
-	DLL_CLASS_IMPORT void Trim(const char* szTargets = "\t\r\n ");
+	DLL_CLASS_IMPORT void Trim(const char *szTargets = "\t\r\n ");
 	DLL_CLASS_IMPORT void TrimLeft(char cTarget);
-	DLL_CLASS_IMPORT void TrimLeft(const char* szTargets = "\t\r\n ");
+	DLL_CLASS_IMPORT void TrimLeft(const char *szTargets = "\t\r\n ");
 	DLL_CLASS_IMPORT void TrimRight(char cTarget);
-	DLL_CLASS_IMPORT void TrimRight(const char* szTargets = "\t\r\n ");
+	DLL_CLASS_IMPORT void TrimRight(const char *szTargets = "\t\r\n ");
 
 	// param1's least significant 4 bits (param1 & 0xf) are used in a switch in V_UnicodeCaseConvert
 	// return value is also dependant on V_UnicodeCaseConvert
@@ -238,29 +219,20 @@ public:
 	// Gets the filename (everything except the path.. c:\a\b\c\somefile.txt -> somefile.txt).
 	DLL_CLASS_IMPORT CUtlString UnqualifiedFilenameAlloc() const;
 
-	const char* Get() const {
-		if (!m_pString)
-		{
-			return "";
-		}
-		return m_pString;
-	}
-	const char* String() const { return Get(); }
-
+	// Returns strlen
 	int Length() const;
+	// IsEmpty() is more efficient than Length() == 0
 	bool IsEmpty() const;
-
-	void Clear() { Purge(); }
 
 private:
 	// AllocMemory allocates enough space for length characters plus a terminating zero.
 	// Previous characters are preserved, the buffer is null-terminated, but new characters
 	// are not touched.
-	DLL_CLASS_IMPORT void*	AllocMemoryBlock(uint64 length);
-	DLL_CLASS_IMPORT void	FreeMemoryBlock();
+	DLL_CLASS_IMPORT void *AllocMemoryBlock(uint32 length);
+	DLL_CLASS_IMPORT void FreeMemoryBlock();
 
 	// If m_pString is not NULL, it points to the start of the string, and the memory allocation.
-	char* m_pString;
+	char *m_pString;
 };
 
 //	// If these are not defined, CUtlConstString as rhs will auto-convert
@@ -269,60 +241,60 @@ private:
 //	inline friend bool operator==( const T *lhs, const CUtlConstStringBase &rhs ) { return rhs.Compare( lhs ) == 0; }
 //	inline friend bool operator!=( const T *lhs, const CUtlConstStringBase &rhs ) { return rhs.Compare( lhs ) != 0; }
 
-CUtlString& CUtlString::operator=(const CUtlString& src)
+inline CUtlString &CUtlString::operator=( const CUtlString &src )
 {
-	SetDirect(src.Get(), src.Length());
+	SetDirect( src.Get(), src.Length() );
 	return *this;
 }
 
-CUtlString& CUtlString::operator=(const char* src)
+inline CUtlString &CUtlString::operator=( const char *src )
 {
-	Set(src);
+	Set( src );
 	return *this;
 }
 
-inline bool operator==(const char* pString, const CUtlString& utlString)
+inline bool operator==( const char *pString, const CUtlString &utlString )
 {
-	return utlString.IsEqual_CaseSensitive(pString);
+	return utlString.IsEqual_CaseSensitive( pString );
 }
 
-inline bool operator!=(const char* pString, const CUtlString& utlString)
+inline bool operator!=( const char *pString, const CUtlString &utlString )
 {
-	return !utlString.IsEqual_CaseSensitive(pString);
+	return !utlString.IsEqual_CaseSensitive( pString );
 }
 
-inline bool operator==(const CUtlString& utlString, const char* pString)
+inline bool operator==( const CUtlString &utlString, const char *pString )
 {
-	return utlString.IsEqual_CaseSensitive(pString);
+	return utlString.IsEqual_CaseSensitive( pString );
 }
 
-inline bool operator!=(const CUtlString& utlString, const char* pString)
+inline bool operator!=( const CUtlString &utlString, const char *pString )
 {
-	return !utlString.IsEqual_CaseSensitive(pString);
+	return !utlString.IsEqual_CaseSensitive( pString );
 }
 
 //-----------------------------------------------------------------------------
 // Inline methods
 //-----------------------------------------------------------------------------
 inline CUtlString::CUtlString()
-: m_pString( NULL )
+	: m_pString( NULL )
 {
 }
 
-inline CUtlString::CUtlString( const char* pString )
-: m_pString(NULL)
+inline CUtlString::CUtlString( const char *pString )
+	: m_pString( NULL )
 {
 	Set( pString );
 }
 
-inline CUtlString::CUtlString( const char* pString, int length )
-: m_pString(NULL)
+inline CUtlString::CUtlString( const char *pString, int length )
+	: m_pString( NULL )
 {
 	SetDirect( pString, length );
 }
 
-inline CUtlString::CUtlString( const CUtlString& string )
-: m_pString(NULL)
+inline CUtlString::CUtlString( const CUtlString &string )
+	: m_pString( NULL )
 {
 	Set( string.Get() );
 }
@@ -332,13 +304,20 @@ inline CUtlString::~CUtlString()
 	Purge();
 }
 
+inline const char *CUtlString::Get() const
+{
+	if(!m_pString)
+	{
+		return "";
+	}
+	return m_pString;
+}
+
 inline int CUtlString::Length() const
 {
-	if (m_pString)
+	if(m_pString)
 	{
-		// V_strlen seems to have changed to V_tier0_strlen
-		// we also have V_tier0_strlen16 and V_tier0_strlen32 now
-		return V_tier0_strlen(m_pString);
+		return V_strlen( m_pString );
 	}
 	return 0;
 }
@@ -348,14 +327,14 @@ inline bool CUtlString::IsEmpty() const
 	return !m_pString || m_pString[0] == 0;
 }
 
-inline int __cdecl CUtlString::SortCaseInsensitive(const CUtlString* pString1, const CUtlString* pString2)
+inline int __cdecl CUtlString::SortCaseInsensitive( const CUtlString *pString1, const CUtlString *pString2 )
 {
-	return V_stricmp_fast(pString1->String(), pString2->String());
+	return V_stricmp( pString1->String(), pString2->String() );
 }
 
-inline int __cdecl CUtlString::SortCaseSensitive(const CUtlString* pString1, const CUtlString* pString2)
+inline int __cdecl CUtlString::SortCaseSensitive( const CUtlString *pString1, const CUtlString *pString2 )
 {
-	return V_strcmp(pString1->String(), pString2->String());
+	return V_strcmp( pString1->String(), pString2->String() );
 }
 
 
