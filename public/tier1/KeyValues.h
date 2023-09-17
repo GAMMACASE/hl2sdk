@@ -160,7 +160,7 @@ public:
 
 	// Find a keyValue, create it if it is not found.
 	// Set bCreate to true to create the key if it doesn't already exist (which ensures a valid pointer will be returned)
-	KeyValues *FindKey( const char *keyName, bool bCreate = false );
+	KeyValues *FindKey( const char *keyName, bool bCreate );
 	KeyValues *FindKey( const char *keyName ) const;
 	KeyValues *FindKey( HKeySymbol keySymbol ) const;
 
