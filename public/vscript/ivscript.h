@@ -1,4 +1,4 @@
-//========== Copyright © 2008, Valve Corporation, All rights reserved. ========
+//========== Copyright ï¿½ 2008, Valve Corporation, All rights reserved. ========
 //
 // Purpose: VScript
 //
@@ -380,6 +380,14 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 // 
 //-----------------------------------------------------------------------------
 
+enum ScriptLoadStatus_t
+{
+	SCRIPT_LOAD_OK = 0,
+	SCRIPT_LOAD_ERR = 1,
+	SCRIPT_LOAD_ERR_SYNTAX = 2,
+	SCRIPT_LOAD_NO_FILESYSTEM = 3,
+};
+
 #ifdef RegisterClass
 #undef RegisterClass
 #endif
@@ -393,34 +401,62 @@ enum ScriptStatus_t
 
 class CSquirrelMetamethodDelegateImpl;
 
+//	Ramblings from a Dumbass, part 1:
+//
+//	Lua impl used is OpenResty LuaJIT.
+//	This is NOT binary compatible with standard LuaJIT.
+//	
+//	Under the hood "references" are used for large parts of the lua impl (pretty much every HSCRIPT handle)
+//	These are indexes in a special lua array. Lua handles allocating and freeing these things.
+//	We can pretty easily tell if a int-y value is a lua ref by seeing if it is compared against -2 (LUA_NOREF).
+//	(VScript also checks against 0 for their own reasons.)
+//	
+
 class IScriptVM
 {
 public:
+	virtual ~IScriptVM() = 0;
+
+	//	Creates a new VM and populates it with base types
 	virtual bool Init() = 0;
+
+	//	Frees the VM
 	virtual void Shutdown() = 0;
+
+	//	Unsure
+	virtual void ClearTypeMap() = 0;
 
 	virtual ScriptLanguage_t GetLanguage() = 0;
 	virtual const char *GetLanguageName() = 0;
 	
+	//	Returns the underlying lua_State object.
+	//	If you're doing this, you're probably doing something wrong.
 	virtual void *GetInternalVM() = 0;
 
-	virtual void AddSearchPath( const char *pszSearchPath ) = 0;
-	
-	virtual void ClearTypeMap() = 0;
-	
+	//	Unimplemented
+	virtual void AddSearchPath() = 0;
+
+	virtual void UnknownAlpha() = 0;
+
 	virtual void EnableLocalDiskAccess() = 0;
-	
-	virtual void ForwardConsoleCommand(const CCommandContext &, const CCommand &) = 0;
+
+	virtual void UnknownBeta() = 0;
+
+	//	Performs a slightly quicker operation compared to the full .CollectGarbage().
+	virtual bool CollectGarbageFast() = 0;
 
 	//--------------------------------------------------------
+	// Execution of compiled script (NOT a specific function within a script!)
+	// hScope is optional, and is passed as null in the second virtual.
+	//--------------------------------------------------------
+	virtual ScriptStatus_t ExecuteScript( HSCRIPT hScript ) = 0;
+	virtual ScriptStatus_t ExecuteScript( HSCRIPT hScript, HSCRIPT hScope) = 0;
  
- 	virtual bool Frame( float simTime ) = 0;
-
 	//--------------------------------------------------------
 	// Simple script usage
 	//--------------------------------------------------------
 	virtual ScriptStatus_t Run( const char *pszScript, bool bWait = true ) = 0;
-	inline ScriptStatus_t Run( const unsigned char *pszScript, bool bWait = true ) { return Run( (char *)pszScript, bWait ); }
+	inline ScriptStatus_t Run( const unsigned char *pszScript, bool bWait = true ) { return Run( (char *)pszScript ); }
 
 	//--------------------------------------------------------
 	// Compilation
@@ -430,10 +466,11 @@ public:
 	virtual void ReleaseScript( HSCRIPT ) = 0;
 
 	//--------------------------------------------------------
-	// Execution of compiled
+	// Gets the currently executing script/function handle 
+	// (as it was passed to Execute[Script/Function])
+	// Only use this within code invoked from vscript.
 	//--------------------------------------------------------
-	virtual ScriptStatus_t Run( HSCRIPT hScript, HSCRIPT hScope = NULL, bool bWait = true ) = 0;
-	virtual ScriptStatus_t Run( HSCRIPT hScript, bool bWait ) = 0;
+	virtual HSCRIPT GetActive() = 0;
 
 	//--------------------------------------------------------
 	// Scope
@@ -451,7 +488,7 @@ public:
 	//--------------------------------------------------------
 	// Script functions (raw, use Call())
 	//--------------------------------------------------------
-	virtual ScriptStatus_t ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t *pArgs, int nArgs, ScriptVariant_t *pReturn, HSCRIPT hScope, bool bWait ) = 0;
+	virtual ScriptStatus_t ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t *pArgs, int nArgs, ScriptVariant_t *pReturn, HSCRIPT hScope ) = 0;
 
 	//--------------------------------------------------------
 	// External functions
@@ -479,6 +516,10 @@ public:
 
 	//----------------------------------------------------------------------------
 
+	//--------------------------------------------------------
+	// Generate a key guaranteed to be unique across the lifetime of the VM.
+	// No guarantees between different VMs
+	//--------------------------------------------------------
 	virtual bool GenerateUniqueKey( const char *pszRoot, char *pBuf, int nBufSize ) = 0;
 
 	//----------------------------------------------------------------------------
@@ -486,42 +527,55 @@ public:
 	virtual bool ValueExists( HSCRIPT hScope, const char *pszKey ) = 0;
 	bool ValueExists( const char *pszKey )																							{ return ValueExists( NULL, pszKey ); }
 
-	virtual bool SetValue( HSCRIPT hScope, const char *pszKey, const char *pszValue ) = 0;
 	virtual bool SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVariant_t &value ) = 0;
 	virtual bool SetValue( HSCRIPT hScope, int nIndex, const ScriptVariant_t &value ) = 0;
+	virtual bool SetValue( HSCRIPT hScope, const char *pszKey, const char *pszValue ) = 0;
 
 	bool SetValue( const char *pszKey, const ScriptVariant_t &value )																{ return SetValue(NULL, pszKey, value ); }
 
 	virtual bool SetEnumValue(HSCRIPT hScope, const char *pszEnumName, const char *pszValueName, int value, const char *pszDescription) = 0;
-	virtual bool CreateKeyValuesFromTable(HSCRIPT hScope, const char* unk1, void* fUnk, void* unk2) = 0;
 
+	//	Creates a table, passing it's HScript variant into &Table.
 	virtual void CreateTable( ScriptVariant_t &Table ) = 0;
 	virtual bool IsTable( HSCRIPT hScope ) = 0;
 	virtual int	GetNumTableEntries( HSCRIPT hScope ) = 0;
 	virtual int GetNumElements( HSCRIPT hScope ) = 0;
 	virtual int GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue ) = 0;
 
-	virtual bool GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pValue ) = 0;
+	virtual bool CreateKeyValuesFromTable(HSCRIPT hScope, KeyValues *pKeyValues, void *pUnknown, void* pAlsoUnknown) = 0;
+
+	//----------------------------------------------------------------------------
+
 	virtual bool GetValue( HSCRIPT hScope, int nIndex, ScriptVariant_t *pValue ) = 0;
+	virtual bool GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pValue ) = 0;
 	bool GetValue( const char *pszKey, ScriptVariant_t *pValue )																	{ return GetValue(NULL, pszKey, pValue ); }
 	virtual bool GetScalarValue( HSCRIPT hScope, ScriptVariant_t *pValue ) = 0;
+	//	When a Script Variant is HSCRIPT, clone it's underlying ref.
+	virtual HSCRIPT ReferenceValue(ScriptVariant_t *pOriginal, ScriptVariant_t *pOutput) = 0;
+	//	When a Script Variant is HSCRIPT, release it's underlying ref
 	virtual void ReleaseValue( ScriptVariant_t &value ) = 0;
 
 	virtual bool ClearValue( HSCRIPT hScope, const char *pszKey ) = 0;
 	bool ClearValue( const char *pszKey)																							{ return ClearValue( NULL, pszKey ); }
-	
+
+	//----------------------------------------------------------------------------
+
 	virtual HSCRIPT CreateArray( ScriptVariant_t & ) = 0;
 	virtual bool IsArray( HSCRIPT hScope ) = 0;
 	virtual int GetArrayCount( HSCRIPT hScope ) = 0;
-	virtual void ArrayAddToTail( HSCRIPT hScope, const ScriptVariant_t &pValue ) = 0;
+	//	Returns number of objects in array BEFORE insert.
+	virtual int ArrayAddToTail( HSCRIPT hScope, const ScriptVariant_t &pValue ) = 0;
 	
 	//----------------------------------------------------------------------------
 
-	virtual void WriteState( CUtlBuffer *pBuffer ) = 0;
-	virtual void ReadState( CUtlBuffer *pBuffer ) = 0;
+	//	Unimplemented
+	virtual void WriteState() = 0;
+	//	Unimplemented
+	virtual void ReadState() = 0;
 	
-	virtual void CollectGarbage( const char *, bool ) = 0;
+	virtual void CollectGarbage( const char * pUnknown, bool bAlsoUnknown = false ) = 0;
 
+	//	Unimplemented
 	virtual void DumpState() = 0;
 
 	virtual void SetOutputCallback( ScriptOutputFunc_t pFunc ) = 0;
@@ -535,14 +589,15 @@ public:
 
 	virtual HSCRIPT CopyHandle( HSCRIPT hScope ) = 0;
 
-	virtual int GetIdentity( HSCRIPT hScope ) = 0;
+	//	Fetches a script from the filesystem, compiles it, and passes it in script if result
+	//	is SCRIPT_LOAD_OK.
+	virtual ScriptLoadStatus_t LoadAndCompileScriptFile(const char *pszPath, const char *pszUnknown, HSCRIPT *pScript) = 0;
 
-	class ISquirrelMetamethodDelegate;
+	//	Get the ID of this handle. Write as a string into psResult, returns number of bytes written.
+	virtual int GetID( HSCRIPT hScope, char* psResult, int nLength ) = 0;
 
-	virtual void *MakeSquirrelMetamethod_Get( HSCRIPT&, const char*, ISquirrelMetamethodDelegate *, bool ) = 0;
-	virtual void DestroySquirrelMetamethod_Get( CSquirrelMetamethodDelegateImpl * ) = 0;
-
-	virtual int GetKeyValue2( HSCRIPT hScope, int iterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue ) = 0;
+	//	lua_equal the values underlying the handles.
+	virtual bool AreHandlesEqual(HSCRIPT hFirst, HSCRIPT hSecond) = 0;
 
 	//----------------------------------------------------------------------------
 	// Call API
